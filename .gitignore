@@ -1,6 +1,6 @@
 # Build artifacts
 /bin/
-gateway
+/gateway
 gateway.exe
 *.exe
 
