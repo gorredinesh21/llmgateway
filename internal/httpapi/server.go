@@ -34,6 +34,7 @@ func New(pipe *embed.Pipeline) *Server {
 // explicit mux keeps routing obvious and testable with httptest.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", s.handleHome)
 	mux.HandleFunc("/healthz", s.handleHealth)
 	mux.HandleFunc("/metrics", s.handleMetrics)
 	mux.HandleFunc("/embed", s.handleEmbed)
@@ -69,6 +70,28 @@ type embedResponse struct {
 }
 
 // --- handlers ---
+
+// handleHome is a simple landing page so visiting the service in a browser
+// shows something useful instead of a 404.
+func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprint(w, `<!doctype html><html><head><meta charset=utf-8><title>llmgateway</title>
+<style>body{font-family:system-ui;background:#0f1117;color:#e8eaf0;max-width:680px;margin:40px auto;padding:0 16px}pre{background:#171a23;padding:12px;border-radius:8px;overflow:auto}code{color:#4f8cff}</style></head><body>
+<h1>llmgateway <span style="color:#9aa3b5;font-weight:400">— concurrent embedding gateway in Go</span></h1>
+<p>A provider-agnostic gateway that batches embedding calls through a bounded worker pool with rate limiting, retries and an LRU cache. Running with the <b>mock provider</b> (zero keys needed).</p>
+<h3>Try it</h3>
+<pre><code>curl -X POST HOST/embed \
+  -H "Content-Type: application/json" \
+  -d '{"inputs":["hello world","test"]}'</code></pre>
+<h3>Endpoints</h3>
+<ul><li><code>POST /embed</code> — batch embed (JSON)</li><li><code>GET /embed/stream</code> — SSE progress</li><li><code>GET /healthz</code> — liveness</li><li><code>GET /metrics</code> — Prometheus</li></ul>
+<p><a href="https://github.com/gorredinesh21/llmgateway" style="color:#4f8cff">Source &amp; benchmarks (32x speedup)</a></p>
+</body></html>`)
+}
 
 // handleHealth is a trivial liveness probe.
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
